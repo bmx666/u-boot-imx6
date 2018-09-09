@@ -364,6 +364,7 @@ int board_phy_config(struct phy_device *phydev)
 
 #ifdef CONFIG_PHY_MICREL
 #define PHY_ID_KSZ9021	0x221610
+#define PHY_ID_KSZ9031	0x221620
 
 int board_phy_config(struct phy_device *phydev)
 {
@@ -372,6 +373,25 @@ int board_phy_config(struct phy_device *phydev)
 		phy_ar8031_config(phydev);
 	} else if (((phydev->drv->uid ^ PHY_ID_AR8035) & 0xffffffef) == 0) {
 		phy_ar8035_config(phydev);
+	} else if (((phydev->drv->uid ^ PHY_ID_KSZ9031) & 0xfffffff0) == 0) {
+		/* found KSZ, reinit phy for KSZ */
+		setup_iomux_enet(1);
+		/* control data pad skew - devaddr = 0x02, register = 0x04 */
+		ksz9031_phy_extended_write(phydev, 0x02,
+			MII_KSZ9031_EXT_RGMII_CTRL_SIG_SKEW,
+			MII_KSZ9031_MOD_DATA_NO_POST_INC, 0x0000);
+		/* rx data pad skew - devaddr = 0x02, register = 0x05 */
+		ksz9031_phy_extended_write(phydev, 0x02,
+			MII_KSZ9031_EXT_RGMII_RX_DATA_SKEW,
+			MII_KSZ9031_MOD_DATA_NO_POST_INC, 0x0000);
+		/* tx data pad skew - devaddr = 0x02, register = 0x06 */
+		ksz9031_phy_extended_write(phydev, 0x02,
+			MII_KSZ9031_EXT_RGMII_TX_DATA_SKEW,
+			MII_KSZ9031_MOD_DATA_NO_POST_INC, 0x0000);
+		/* gtx and rx clock pad skew - devaddr = 0x02, register = 0x08 */
+		ksz9031_phy_extended_write(phydev, 0x02,
+			MII_KSZ9031_EXT_RGMII_CLOCK_SKEW,
+			MII_KSZ9031_MOD_DATA_NO_POST_INC, 0x03FF);
 	} else if (((phydev->drv->uid ^ PHY_ID_KSZ9021) & 0xfffffff0) == 0) {
 		/* found KSZ, reinit phy for KSZ */
 		setup_iomux_enet(1);

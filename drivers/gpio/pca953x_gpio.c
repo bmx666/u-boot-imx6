@@ -34,6 +34,8 @@
 #define PCA953X_INVERT          2
 #define PCA953X_DIRECTION       3
 
+#define REG_ADDR_AI             0x80
+
 #define PCA_GPIO_MASK           0x00FF
 #define PCA_INT                 0x0100
 #define PCA953X_TYPE            0x1000
@@ -112,20 +114,15 @@ static int pca953x_read_single(struct udevice *dev, int reg, u8 *val,
 static int pca953x_read_regs(struct udevice *dev, int reg, u8 *val)
 {
 	struct pca953x_info *info = dev_get_platdata(dev);
+	int bank_shift = fls((info->gpio_count - 1) / BANK_SZ);
 	int ret = 0;
 
-	if (info->gpio_count <= 8) {
-		ret = dm_i2c_read(dev, reg, val, 1);
-	} else if (info->gpio_count <= 16) {
-		ret = dm_i2c_read(dev, reg << 1, val, info->bank_count);
-	} else if (info->gpio_count == 40) {
-		/* Auto increment */
-		ret = dm_i2c_read(dev, (reg << 3) | 0x80, val,
-				  info->bank_count);
-	} else {
-		dev_err(dev, "Unsupported now\n");
-		return -EINVAL;
-	}
+	reg <<= bank_shift;
+
+	if (info->gpio_count >= BANK_SZ * 3)
+		reg |= REG_ADDR_AI;
+
+	ret = dm_i2c_read(dev, reg, val, info->bank_count);
 
 	return ret;
 }
